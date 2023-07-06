@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>RAB</title>
+    <style>
+        /* Add custom CSS styles */
+        body {
+            padding-top: 50px;
+            text-align: center;
+        }
+        
+        .container {
+            margin-bottom: 20px;
+        }
+        
+        .upload-button {
+            display: inline-block;
+            padding: 10px 20px;
+            border: 2px solid #ccc;
+            background-color: red;
+            color: white;
+            cursor: fit-content;
+            margin-right: 10px;
+        }
+        
+        .upload-button.selected {
+            background-color: green;
+        }
+        
+        .file-list {
+            text-align: left;
+            margin-top: 20px;
+        }
+        
+        .file-table {
+            margin: 0 auto;
+            border-collapse: collapse;
+            width: 80%;
+        }
+        
+        .file-table th,
+        .file-table td {
+            border: 4px solid #ccc;
+            padding: 8px;
+        }
+        
+        .file-table th {
+            background-color: #f2f2f2;
+            text-align: center;
+            cursor: pointer;
+            position: relative;
+        }
+        
+        .file-table th::after {
+            content: "";
+            display: inline-block;
+            width: 0;
+            height: 0;
+            border-left: 5px solid transparent;
+            border-right: 5px solid transparent;
+            position: absolute;
+            right: 5px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        
+        .file-table th.asc::after {
+            border-bottom: 5px solid black;
+        }
+        
+        .file-table th.desc::after {
+            border-top: 5px solid black;
+        }
+        
+        .file-table td:nth-child(2) {
+            text-align: left;
+        }
+        
+        .center {
+            text-align: center;
+        }
+        
+        .button-container {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .button-container .button {
+            display: inline-block;
+            padding: 10px 20px;
+            margin-right: 10px;
+            border: 2px solid #ccc;
+            background-color: #f2f2f2;
+            color: black;
+            text-decoration: none;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .button-container .button:hover {
+            background-color: #ddd;
+        }
+        
+        .select-file-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 10px auto;
+            width: 80%;
+            padding: 10px;
+            border: 2px solid #ccc;
+        }
+        
+        .file-name {
+            cursor: pointer;
+        }
+        
+        .upload-table {
+            margin: 0 auto;
+            border-collapse: collapse;
+            width: 80%;
+        }
+        
+        .upload-table td {
+            padding: 8px;
+            border: none;
+        }
+    </style>
+</head>
+<body> 
+    <h1 class="center">RAB</h1>
+
+    <div class="button-container">
+        <a href="{{ url_for('test') }}" class="button">Home</a>
+        <a href="{{ url_for('keuangan') }}" class="button">Back</a>
+    </div>
+    
+    <div class="upload-table">
+        <table>
+            <tbody>
+                <tr>
+                    <td class="center" style="width: auto;">&nbsp;</td>
+                    <td class="center" style="width: 75%;">
+                        <div class="select-file-container">
+                            <label for="file-upload" class="upload-button">Select File</label>
+                            <span id="file-name-display"></span>
+                        </div>
+                    </td>
+                    <td class="center" style="width: 25%;" colspan="2">
+                        <form action="/upload" method="POST" enctype="multipart/form-data">
+                            <input type="file" id="file" name="file" style="display: none;">
+                            <input type="submit" value="Upload" class="upload-button">
+                        </form>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="file-list">
+        <h2 class="center">Uploaded Files:</h2>
+        <table class="file-table">
+            <thead>
+                <tr>
+                    <th class="center" style="width: 7%;">Number</th>
+                    <th class="center" style="width: auto;">File Name</th>
+                    <th class="center" style="width: 15%;" onclick="sortTable(2)">Upload Time</th>
+                    <th class="center" style="width: 15%;" colspan="2">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for file in files %}
+                <tr>
+                    <td class="center">{{ loop.index }}</td>
+                    <td class="center">{{ file }}</td>
+                    <td class="center">{{ file|upload_time }}</td>
+                    <td class="center">
+                        <a href="{{ url_for('download_file', filename=file) }}" onclick="return confirm('Are you sure you want to download {{ file }}?')">Download</a>
+                    </td>
+                    <td class="center">
+                        <a href="{{ url_for('delete_file', filename=file) }}" onclick="return confirm('Are you sure you want to delete {{ file }}?')">Delete</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        // Add event listener to the file input
+        var fileInput = document.getElementById('file');
+        var uploadButton = document.querySelector('.select-file-container .upload-button');
+        var fileNameDisplay = document.getElementById('file-name-display');
+        
+        uploadButton.addEventListener('click', function() {
+            fileInput.click();
+        });
+        
+        fileInput.addEventListener('change', function() {
+            if (fileInput.files.length > 0) {
+                // File selected, change the upload button to green
+                uploadButton.classList.add('selected');
+                fileNameDisplay.textContent = fileInput.files[0].name;
+            } else {
+                // No file selected, change the upload button to red
+                uploadButton.classList.remove('selected');
+                fileNameDisplay.textContent = '';
+            }
+        });
+        
+        // Function to sort the table by column index
+        function sortTable(columnIndex) {
+            var table, rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0;
+            table = document.querySelector('.file-table');
+            switching = true;
+            // Set the sorting direction based on the current class of the column header
+            dir = table.getElementsByTagName('th')[columnIndex].classList.contains('asc') ? 'desc' : 'asc';
+            
+            while (switching) {
+                switching = false;
+                rows = table.getElementsByTagName('tr');
+                
+                for (i = 1; i < (rows.length - 1); i++) {
+                    shouldSwitch = false;
+                    x = rows[i].getElementsByTagName('td')[columnIndex];
+                    y = rows[i + 1].getElementsByTagName('td')[columnIndex];
+                    
+                    if (dir === 'asc') {
+                        if (x.textContent.toLowerCase() > y.textContent.toLowerCase()) {
+                            shouldSwitch = true;
+                            break;
+                        }
+                    } else if (dir === 'desc') {
+                        if (x.textContent.toLowerCase() < y.textContent.toLowerCase()) {
+                            shouldSwitch = true;
+                            break;
+                        }
+                    }
+                }
+                
+                if (shouldSwitch) {
+                    rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+                    switching = true;
+                    switchcount++;
+                } else {
+                    if (switchcount === 0 && dir === 'asc') {
+                        dir = 'desc';
+                        switching = true;
+                    }
+                }
+            }
+            
+            // Remove the sorting classes from all column headers
+            var headers = table.getElementsByTagName('th');
+            for (var j = 0; j < headers.length; j++) {
+                headers[j].classList.remove('asc', 'desc');
+            }
+            
+            // Add the sorting class to the current column header
+            table.getElementsByTagName('th')[columnIndex].classList.add(dir);
+        }
+    </script>
+</body>
+</html>
